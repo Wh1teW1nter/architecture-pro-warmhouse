@@ -20,7 +20,9 @@ channels:
             metricType: { type: string }
             value: { type: number }
             unit: { type: string }
-            timestamp: { type: string; format: date-time }
+            timestamp:
+              type: string
+              format: "date-time"
           examples:
             - deviceId: "dev-1"
               houseId: "house-1"
@@ -48,7 +50,9 @@ channels:
               type: string
               enum: [user, scenario]
               description: "user — от пользователя через API; scenario — от Scenarios & Automation (напр. правило по температуре)."
-            timestamp: { type: string; format: date-time }
+            timestamp:
+              type: string
+              format: "date-time"
           examples:
             - commandId: "cmd-001"
               deviceId: "dev-heater-1"

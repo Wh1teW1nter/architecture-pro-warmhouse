@@ -226,12 +226,12 @@ paths:
           in: query
           schema:
             type: string
-            format: date-time
+            format: "date-time"
         - name: to
           in: query
           schema:
             type: string
-            format: date-time
+            format: "date-time"
         - name: metricType
           in: query
           schema:
@@ -265,7 +265,9 @@ components:
         deviceTypeId: { type: string }
         externalId: { type: string }
         status: { type: string }
-        lastSeenAt: { type: string; format: date-time }
+        lastSeenAt:
+          type: string
+          format: "date-time"
 
     RegisterDeviceRequest:
       type: object
@@ -283,14 +285,18 @@ components:
         houseId: { type: string }
         name: { type: string }
         isEnabled: { type: boolean }
-        createdAt: { type: string; format: date-time }
+        createdAt:
+          type: string
+          format: "date-time"
 
     ScenarioCreate:
       type: object
       required: [name]
       properties:
         name: { type: string }
-        isEnabled: { type: boolean; default: true }
+        isEnabled:
+          type: boolean
+          default: true
 
     SendCommandRequest:
       type: object
@@ -303,7 +309,9 @@ components:
       type: object
       properties:
         commandId: { type: string }
-        status: { type: string; example: PENDING }
+        status:
+          type: string
+          example: PENDING
         issuedBy:
           type: string
           enum: [user, scenario]
@@ -326,7 +334,9 @@ components:
                     metricType: { type: string }
                     value: { type: number }
                     unit: { type: string }
-                    timestamp: { type: string; format: date-time }
+                    timestamp:
+                      type: string
+                      format: "date-time"
 
     Error:
       type: object
