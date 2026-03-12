@@ -7,13 +7,11 @@ import (
 	"time"
 )
 
-// TemperatureService handles fetching temperature data from external API
 type TemperatureService struct {
 	BaseURL    string
 	HTTPClient *http.Client
 }
 
-// TemperatureResponse represents the response from the temperature API
 type TemperatureResponse struct {
 	Value       float64   `json:"value"`
 	Unit        string    `json:"unit"`
@@ -25,7 +23,6 @@ type TemperatureResponse struct {
 	Description string    `json:"description"`
 }
 
-// NewTemperatureService creates a new temperature service
 func NewTemperatureService(baseURL string) *TemperatureService {
 	return &TemperatureService{
 		BaseURL: baseURL,
@@ -35,7 +32,6 @@ func NewTemperatureService(baseURL string) *TemperatureService {
 	}
 }
 
-// GetTemperature fetches temperature data for a specific location
 func (s *TemperatureService) GetTemperature(location string) (*TemperatureResponse, error) {
 	url := fmt.Sprintf("%s/temperature?location=%s", s.BaseURL, location)
 
@@ -57,7 +53,6 @@ func (s *TemperatureService) GetTemperature(location string) (*TemperatureRespon
 	return &temperatureResp, nil
 }
 
-// GetTemperatureByID fetches temperature data for a specific sensor ID
 func (s *TemperatureService) GetTemperatureByID(sensorID string) (*TemperatureResponse, error) {
 	url := fmt.Sprintf("%s/temperature/%s", s.BaseURL, sensorID)
 

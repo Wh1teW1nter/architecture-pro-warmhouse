@@ -1,0 +1,59 @@
+asyncapi: 2.6.0
+info:
+  title: WarmHouse Events
+  version: 1.0.0
+  description: События телеметрии и команд для асинхронной обработки (сценарии, аналитика, партнёры).
+
+channels:
+  telemetry.measured:
+    description: Новое измерение телеметрии от устройства (температура, освещённость, состояние ворот и т.д.).
+    subscribe:
+      message:
+        name: TelemetryMeasured
+        contentType: application/json
+        payload:
+          type: object
+          properties:
+            deviceId: { type: string }
+            houseId: { type: string }
+            roomId: { type: string }
+            metricType: { type: string }
+            value: { type: number }
+            unit: { type: string }
+            timestamp: { type: string; format: date-time }
+          examples:
+            - deviceId: "dev-1"
+              houseId: "house-1"
+              roomId: "room-101"
+              metricType: "temperature"
+              value: 22.5
+              unit: "C"
+              timestamp: "2026-03-11T12:00:00Z"
+
+  command.sent:
+    description: Команда отправлена на устройство (Device Control Service). Источник — пользователь (API Gateway) или Scenarios & Automation (управление отоплением и др.).
+    subscribe:
+      message:
+        name: DeviceCommandSent
+        contentType: application/json
+        payload:
+          type: object
+          properties:
+            commandId: { type: string }
+            deviceId: { type: string }
+            houseId: { type: string }
+            commandType: { type: string }
+            payload: { type: object }
+            issuedBy:
+              type: string
+              enum: [user, scenario]
+              description: "user — от пользователя через API; scenario — от Scenarios & Automation (напр. правило по температуре)."
+            timestamp: { type: string; format: date-time }
+          examples:
+            - commandId: "cmd-001"
+              deviceId: "dev-heater-1"
+              houseId: "house-1"
+              commandType: "SET_TEMPERATURE"
+              payload: { targetTemperature: 22 }
+              issuedBy: "scenario"
+              timestamp: "2026-03-11T14:00:00Z"

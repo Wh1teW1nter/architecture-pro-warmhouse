@@ -1,0 +1,30 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+LAYOUT_TOP_DOWN()
+
+Container(automationSvc, "Scenarios & Automation Service", "Java, Spring Boot", "Сценарии и правила: отопление, свет, ворота, мониторинг.")
+
+Component(scenarioApi, "ScenarioController", "Spring @RestController", "CRUD сценариев и правил, активация/деактивация.")
+Component(automationEngine, "AutomationEngine", "Spring @Service", "Выполнение правил: по расписанию, по телеметрии, по действию пользователя.")
+Component(scenarioRepo, "ScenarioRepository", "Spring Data JPA", "Сценарии, правила, расписания.")
+Component(telemetryClient, "TelemetryServiceClient", "WebClient/OpenFeign", "Текущее состояние устройств.")
+Component(controlClient, "DeviceControlServiceClient", "WebClient/OpenFeign", "Отправка команд на устройства.")
+Component(catalogClient, "CatalogServiceClient", "WebClient/OpenFeign", "Метаданные устройств для правил.")
+
+ComponentDb(automationDb, "Automation DB", "PostgreSQL", "Сценарии, правила.")
+
+Component_Ext(telemetrySvc, "Telemetry & State Service", "HTTP", "")
+Component_Ext(controlSvc, "Device Control Service", "HTTP", "")
+Component_Ext(catalogSvc, "Device Catalog & Provisioning Service", "HTTP", "")
+
+Rel(scenarioApi, automationEngine, "Вызывает")
+Rel(automationEngine, scenarioRepo, "Читает/пишет")
+Rel(automationEngine, telemetryClient, "Состояние устройств")
+Rel(automationEngine, controlClient, "Команды")
+Rel(automationEngine, catalogClient, "Метаданные устройств")
+Rel(scenarioRepo, automationDb, "SQL")
+Rel(telemetryClient, telemetrySvc, "HTTP")
+Rel(controlClient, controlSvc, "HTTP")
+Rel(catalogClient, catalogSvc, "HTTP")
+
+@enduml

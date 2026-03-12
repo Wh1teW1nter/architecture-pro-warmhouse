@@ -1,0 +1,26 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+LAYOUT_TOP_DOWN()
+
+Container(controlSvc, "Device Control Service", "Java, Spring Boot", "Отправка команд на устройства по протоколам партнёров.")
+
+Component(controlApi, "ControlController", "Spring @RestController", "Эндпоинт приёма команд от клиентов и от Automation Service.")
+Component(controlService, "ControlService", "Spring @Service", "Маршрутизация команды к нужному адаптеру по типу устройства.")
+Component(catalogClient, "CatalogServiceClient", "WebClient/OpenFeign", "Получение типа устройства и параметров подключения (протокол, endpoint).")
+Component(mqttAdapter, "MqttCommandAdapter", "Spring @Component", "Отправка команд по MQTT.")
+Component(httpAdapter, "HttpCommandAdapter", "Spring @Component", "Отправка команд по HTTP (REST партнёров).")
+Component(queuePublisher, "CommandEventPublisher", "Spring Cloud Stream", "Публикация событий отправки команд (для логов, реакций).")
+
+Component_Ext(catalogSvc, "Device Catalog & Provisioning Service", "HTTP", "")
+Component_Ext(partnerDevices, "Устройства партнёров", "MQTT/HTTP", "")
+
+Rel(controlApi, controlService, "Вызывает")
+Rel(controlService, catalogClient, "Параметры устройства")
+Rel(controlService, mqttAdapter, "Команда по MQTT")
+Rel(controlService, httpAdapter, "Команда по HTTP")
+Rel(controlService, queuePublisher, "Событие")
+Rel(catalogClient, catalogSvc, "HTTP")
+Rel(mqttAdapter, partnerDevices, "MQTT")
+Rel(httpAdapter, partnerDevices, "HTTP")
+
+@enduml
