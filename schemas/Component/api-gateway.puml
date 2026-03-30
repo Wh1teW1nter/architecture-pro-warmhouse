@@ -1,0 +1,30 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+LAYOUT_TOP_DOWN()
+
+Container(apiGateway, "API Gateway", "Java, Spring Cloud Gateway", "Единая точка входа для клиентов.")
+
+Component(routeHandlers, "RouteHandlers", "Spring Cloud Gateway routes/filters", "Маршрутизация запросов к микросервисам по пути и методу.")
+Component(authFilter, "Auth Filter", "Spring Cloud Gateway Filter", "Проверка JWT/токенов, вызов User & Auth Service при необходимости.")
+Component(rateLimit, "Rate Limiter", "Spring Cloud Gateway Filter", "Ограничение частоты запросов по пользователю/ключу.")
+Component(logging, "Logging & Metrics Filter", "Spring Cloud Gateway Filter", "Логирование запросов, метрики, распределённая трассировка.")
+Component(aggregator, "Response Aggregator", "Java Component", "Агрегация ответов от нескольких сервисов для составных запросов клиента.")
+
+Component_Ext(authSvc, "User & Auth Service", "HTTP", "Валидация токенов, данные о пользователе.")
+Component_Ext(catalogSvc, "Device Catalog & Provisioning Service", "HTTP", "")
+Component_Ext(automationSvc, "Scenarios & Automation Service", "HTTP", "")
+Component_Ext(telemetrySvc, "Telemetry & State Service", "HTTP", "")
+Component_Ext(controlSvc, "Device Control Service", "HTTP", "")
+
+Rel(routeHandlers, authFilter, "Применяет")
+Rel(routeHandlers, rateLimit, "Применяет")
+Rel(routeHandlers, logging, "Применяет")
+Rel(routeHandlers, aggregator, "При необходимости агрегирует ответы")
+
+Rel(authFilter, authSvc, "Валидация токена/прав", "HTTP")
+Rel(aggregator, catalogSvc, "Запросы каталога/устройств", "HTTP")
+Rel(aggregator, automationSvc, "Запросы сценариев", "HTTP")
+Rel(aggregator, telemetrySvc, "Запросы телеметрии", "HTTP")
+Rel(aggregator, controlSvc, "Команды управления", "HTTP")
+
+@enduml

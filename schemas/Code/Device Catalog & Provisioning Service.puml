@@ -1,0 +1,37 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+LAYOUT_TOP_DOWN()
+
+Container(catalogSvc, "Device Catalog & Provisioning Service", "Java, Spring Boot", "Внутренняя структура на уровне кода (пакеты и классы).")
+
+Container_Boundary(api, "api") {
+  Component(catalogCtrl, "CatalogController", "Spring @RestController", "getDeviceTypes(category), getDeviceTypeById(id).")
+  Component(provisionCtrl, "ProvisioningController", "Spring @RestController", "registerDevice(request), listMyDevices(houseId), unbindDevice(deviceId).")
+}
+
+Container_Boundary(application, "application") {
+  Component(catalogSvcApp, "DeviceCatalogService", "Spring @Service", "listTypesByCategory(category), getType(id).")
+  Component(provisionSvcApp, "DeviceProvisioningService", "Spring @Service", "registerDevice(userId, request), getDevicesByHouse(houseId).")
+}
+
+Container_Boundary(domain, "domain") {
+  Component(deviceTypeEntity, "DeviceType", "Domain entity", "id, code, category, protocol, supportedCommands.")
+  Component(deviceEntity, "Device", "Domain entity", "id, houseId, roomId, deviceTypeId, externalId, status.")
+}
+
+Container_Boundary(infrastructure, "infrastructure") {
+  Component(typeRepo, "DeviceTypeRepository", "Spring Data JPA", "Доступ к каталогу типов устройств.")
+  Component(deviceRepo, "DeviceRepository", "Spring Data JPA", "Доступ к зарегистрированным устройствам.")
+  Component(authClient, "AuthServiceClient", "WebClient/OpenFeign", "Проверка прав пользователя на дом.")
+}
+
+Rel(catalogCtrl, catalogSvcApp, "вызывает")
+Rel(provisionCtrl, provisionSvcApp, "вызывает")
+Rel(catalogSvcApp, typeRepo, "использует")
+Rel(provisionSvcApp, deviceRepo, "использует")
+Rel(provisionSvcApp, typeRepo, "использует")
+Rel(provisionSvcApp, authClient, "проверяет права")
+Rel(provisionSvcApp, deviceEntity, "создаёт/обновляет")
+Rel(catalogSvcApp, deviceTypeEntity, "возвращает")
+
+@enduml

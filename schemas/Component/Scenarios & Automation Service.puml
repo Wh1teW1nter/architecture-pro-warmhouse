@@ -1,0 +1,24 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+LAYOUT_TOP_DOWN()
+
+Container(authSvc, "User & Auth Service", "Java, Spring Boot, Spring Security", "Пользователи, аутентификация, авторизация.")
+
+Component(authApi, "AuthController", "Spring @RestController", "Логин, регистрация, refresh токенов, управление профилем.")
+Component(userAppSvc, "UserService", "Spring @Service", "Операции с пользователями и их ролями.")
+Component(authDomain, "Auth Domain Model", "Java Domain Classes", "User, Role, Permission, Token.")
+Component(userRepo, "UserRepository", "Spring Data JPA", "Доступ к данным пользователей и ролей.")
+Component(tokenProvider, "TokenProvider", "Spring @Component", "Генерация и валидация JWT/токенов.")
+Component(passwordHasher, "PasswordHasher", "Spring Security PasswordEncoder", "Хеширование и проверка паролей.")
+Component(authConfig, "SecurityConfig", "Spring Security Config", "HTTP‑безопасность, фильтры, настройка контекста безопасности.")
+
+ComponentDb(authDb, "Auth DB", "PostgreSQL", "Пользователи, роли, токены.")
+
+Rel(authApi, userAppSvc, "Вызывает")
+Rel(userAppSvc, userRepo, "Читает/пишет")
+Rel(userAppSvc, tokenProvider, "Создаёт/валидирует токены")
+Rel(userAppSvc, passwordHasher, "Хеширует/проверяет пароли")
+Rel(authConfig, tokenProvider, "Использует в фильтрах безопасности")
+Rel(userRepo, authDb, "Чтение/запись", "SQL/JPA")
+
+@enduml

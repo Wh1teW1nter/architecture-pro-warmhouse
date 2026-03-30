@@ -1,0 +1,57 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+LAYOUT_LEFT_RIGHT()
+
+Person(user, "Пользователь", "Самообслуживание: подключение устройств, сценарии, управление, телеметрия.")
+
+System_Boundary(warmhouse, "WarmHouse (Java microservices)") {
+
+  Container(web, "Web / Mobile Client", "SPA, PWA или нативное приложение", "Самообслуживание: каталог модулей, подключение устройств, настройка сценариев, дашборд телеметрии и управления.")
+
+  Container(apiGateway, "API Gateway", "Java, Spring Cloud Gateway", "Единая точка входа для клиентов, маршрутизация и агрегация.")
+
+  Container_Boundary(services, "Микросервисы (Java)") {
+    Container(authSvc, "User & Auth Service", "Java, Spring Boot, Spring Security, JPA + PostgreSQL", "Регистрация, аутентификация, профиль, привязка пользователя к домам и подпискам.")
+    Container(catalogSvc, "Device Catalog & Provisioning Service", "Java, Spring Boot, JPA + PostgreSQL", "Каталог типов устройств и модулей партнёров, самостоятельная регистрация устройств пользователем, привязка к дому/комнатам.")
+    Container(automationSvc, "Scenarios & Automation Service", "Java, Spring Boot, JPA + PostgreSQL", "Сценарии и правила: отопление, свет, ворота, мониторинг; пользовательское программирование поведения.")
+    Container(telemetrySvc, "Telemetry & State Service", "Java, Spring Boot, JPA/R2DBC + TimescaleDB/PostgreSQL", "Приём телеметрии от устройств, хранение, выдача текущего состояния и истории.")
+    Container(controlSvc, "Device Control Service", "Java, Spring Boot + MQTT/HTTP adapters", "Отправка команд на устройства (вкл/выкл свет, отопление, ворота) по стандартным протоколам.")
+    Container(notifSvc, "Notification Service", "Java, Spring Boot, Spring Cloud Stream + Kafka/RabbitMQ + PostgreSQL", "Уведомления пользователю по событиям и правилам сценариев.")
+  }
+
+  ContainerDb(authDb, "Auth DB", "PostgreSQL", "Пользователи, сессии, подписки.")
+  ContainerDb(catalogDb, "Catalog & Devices DB", "PostgreSQL", "Каталог типов устройств/модулей, зарегистрированные устройства пользователей, привязки к домам.")
+  ContainerDb(automationDb, "Automation DB", "PostgreSQL", "Сценарии, правила, расписания.")
+  ContainerDb(telemetryDb, "Telemetry DB", "TimescaleDB/PostgreSQL", "Телеметрия и состояние устройств.")
+  ContainerDb(notifDb, "Notification DB", "PostgreSQL", "Настройки и логи уведомлений.")
+
+  Container_Ext(partnerDevices, "Устройства партнёров", "MQTT/HTTP/др.", "Датчики, реле, камеры, контроллеры отопления/света/ворот. Подключаются пользователем.")
+  Container_Ext(channels, "Email / SMS / Push", "Внешние API", "Доставка уведомлений.")
+}
+
+Rel(user, web, "Использует", "HTTPS")
+Rel(web, apiGateway, "API", "JSON/REST")
+
+Rel(apiGateway, authSvc, "Авторизация, профиль", "HTTP")
+Rel(apiGateway, catalogSvc, "Каталог, регистрация устройств", "HTTP")
+Rel(apiGateway, automationSvc, "Сценарии, правила", "HTTP")
+Rel(apiGateway, telemetrySvc, "Телеметрия, состояние", "HTTP")
+Rel(apiGateway, controlSvc, "Команды управления", "HTTP")
+
+Rel(partnerDevices, telemetrySvc, "Отправляют телеметрию", "MQTT/HTTP")
+Rel(controlSvc, partnerDevices, "Отправляет команды", "MQTT/HTTP/протоколы партнёров")
+
+Rel(catalogSvc, catalogDb, "Чтение/запись", "SQL")
+Rel(authSvc, authDb, "Чтение/запись", "SQL")
+Rel(automationSvc, automationDb, "Чтение/запись", "SQL")
+Rel(telemetrySvc, telemetryDb, "Чтение/запись", "SQL")
+Rel(notifSvc, notifDb, "Чтение/запись", "SQL")
+
+Rel(automationSvc, telemetrySvc, "Текущее состояние устройств", "HTTP")
+Rel(automationSvc, controlSvc, "Исполнение команд по сценариям", "HTTP")
+Rel(automationSvc, catalogSvc, "Метаданные устройств", "HTTP")
+Rel(controlSvc, catalogSvc, "Адресация и протокол устройств", "HTTP")
+
+Rel(notifSvc, channels, "Отправка", "HTTPS/API")
+
+@enduml

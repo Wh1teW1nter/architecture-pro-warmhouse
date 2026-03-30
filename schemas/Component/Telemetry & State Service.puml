@@ -1,0 +1,26 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+LAYOUT_TOP_DOWN()
+
+Container(telemetrySvc, "Telemetry & State Service", "Java, Spring Boot", "Приём телеметрии, хранение, выдача состояния и истории.")
+
+Component(ingestApi, "IngestController", "Spring @RestController", "Приём телеметрии от устройств (HTTP) и от шлюзов MQTT.")
+Component(queryApi, "QueryController", "Spring @RestController", "Текущее состояние устройств, история по дому/устройству/датчику.")
+Component(ingestService, "IngestService", "Spring @Service", "Валидация, обогащение по каталогу, запись.")
+Component(queryService, "QueryService", "Spring @Service", "Агрегаты, фильтры по времени и типу метрики.")
+Component(measureRepo, "MeasurementRepository", "Spring Data JPA/R2DBC", "Измерения и текущее состояние.")
+Component(catalogClient, "CatalogServiceClient", "WebClient/OpenFeign", "Проверка deviceId при приёме телеметрии.")
+
+ComponentDb(telemetryDb, "Telemetry DB", "TimescaleDB/PostgreSQL", "Телеметрия, состояние.")
+
+Component_Ext(catalogSvc, "Device Catalog & Provisioning Service", "HTTP", "")
+
+Rel(ingestApi, ingestService, "Вызывает")
+Rel(queryApi, queryService, "Вызывает")
+Rel(ingestService, measureRepo, "Пишет")
+Rel(ingestService, catalogClient, "Валидация устройства")
+Rel(queryService, measureRepo, "Читает")
+Rel(measureRepo, telemetryDb, "SQL")
+Rel(catalogClient, catalogSvc, "HTTP")
+
+@enduml

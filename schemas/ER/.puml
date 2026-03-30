@@ -1,0 +1,131 @@
+@startuml
+title WarmHouse ER Diagram — целевая экосистема SaaS
+
+hide circle
+skinparam linetype ortho
+
+entity "User" as user {
+  * id : bigint <<PK>>
+  --
+  email : varchar
+  password_hash : varchar
+  full_name : varchar
+  subscription_plan : varchar
+  status : varchar
+  created_at : timestamp
+}
+
+entity "House" as house {
+  * id : bigint <<PK>>
+  --
+  owner_id : bigint <<FK to User.id>>
+  name : varchar
+  address : varchar
+  timezone : varchar
+  created_at : timestamp
+}
+
+entity "Room" as room {
+  * id : bigint <<PK>>
+  --
+  house_id : bigint <<FK to House.id>>
+  name : varchar
+}
+
+entity "DeviceType" as devtype {
+  * id : bigint <<PK>>
+  --
+  code : varchar
+  name : varchar
+  category : varchar   -- heating / lighting / gate / monitoring
+  vendor : varchar
+  protocol : varchar    -- MQTT / HTTP / partner_specific
+  connection_schema : text
+  supported_commands : text
+}
+
+entity "Device" as device {
+  * id : bigint <<PK>>
+  --
+  house_id : bigint <<FK to House.id>>
+  room_id : bigint <<FK to Room.id>>
+  device_type_id : bigint <<FK to DeviceType.id>>
+  external_id : varchar
+  provisioning_token_hash : varchar
+  status : varchar
+  last_seen_at : timestamp
+}
+
+entity "Scenario" as scenario {
+  * id : bigint <<PK>>
+  --
+  house_id : bigint <<FK to House.id>>
+  name : varchar
+  is_enabled : boolean
+  created_at : timestamp
+}
+
+entity "ScenarioRule" as rule {
+  * id : bigint <<PK>>
+  --
+  scenario_id : bigint <<FK to Scenario.id>>
+  trigger_type : varchar   -- schedule / telemetry / manual
+  trigger_config : text     -- для отопления: расписание, порог температуры и т.п.
+  action_type : varchar     -- command / notify
+  action_config : text      -- для command: deviceId, commandType (ON/OFF/SET_TEMPERATURE), payload
+  order_index : int
+}
+
+entity "TelemetryData" as telemetry {
+  * id : bigint <<PK>>
+  --
+  device_id : bigint <<FK to Device.id>>
+  ts : timestamp
+  metric_type : varchar
+  value : decimal(10,2)
+  unit : varchar
+}
+
+entity "DeviceCommand" as command {
+  * id : bigint <<PK>>
+  --
+  device_id : bigint <<FK to Device.id>>
+  issued_by_user_id : bigint <<FK to User.id>>  -- nullable если команда от сценария
+  scenario_id : bigint <<FK to Scenario.id>>    -- nullable если команда от пользователя
+  command_type : varchar   -- ON / OFF / SET_TEMPERATURE / OPEN / CLOSE и т.д.
+  payload : text
+  created_at : timestamp
+  status : varchar
+}
+
+entity "Notification" as notif {
+  * id : bigint <<PK>>
+  --
+  user_id : bigint <<FK to User.id>>
+  house_id : bigint <<FK to House.id>>
+  type : varchar
+  channel : varchar
+  payload : text
+  created_at : timestamp
+  sent_at : timestamp
+  status : varchar
+}
+
+user ||--o{ house : "владеет"
+house ||--o{ room : "содержит"
+house ||--o{ device : "содержит"
+room  ||--o{ device : "содержит"
+devtype ||--o{ device : "определяет тип"
+
+house ||--o{ scenario : "имеет сценарии"
+scenario ||--o{ rule : "содержит правила"
+
+device ||--o{ telemetry : "генерирует телеметрию"
+device ||--o{ command : "получает команды"
+user   ||--o{ command : "отдаёт команды"
+scenario ||--o{ command : "генерирует команды"
+
+user  ||--o{ notif : "получает уведомления"
+house ||--o{ notif : "контекст уведомлений"
+
+@enduml

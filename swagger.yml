@@ -1,0 +1,345 @@
+openapi: 3.0.3
+info:
+  title: WarmHouse SaaS API
+  version: 1.0.0
+  description: |
+    API экосистемы умного дома в режиме самообслуживания:
+    каталог модулей партнёров, самостоятельная регистрация устройств,
+    сценарии автоматизации, телеметрия, управление приборами (отопление, свет, ворота, мониторинг).
+
+servers:
+  - url: https://api.warmhouse.example
+    description: Публичный API
+
+paths:
+  /catalog/device-types:
+    get:
+      summary: Каталог типов устройств и модулей
+      description: Список типов устройств партнёров по категориям (отопление, свет, ворота, мониторинг) для самообслуживания.
+      tags: [Catalog]
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+            enum: [heating, lighting, gate, monitoring]
+        - name: vendor
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Список типов устройств
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DeviceType'
+              examples:
+                list:
+                  value:
+                    - id: "type-1"
+                      code: "HEATER_V2"
+                      name: "Терморегулятор v2"
+                      category: "heating"
+                      vendor: "PartnerA"
+                      protocol: "MQTT"
+                    - id: "type-2"
+                      code: "RELAY_LIGHT"
+                      name: "Реле освещения"
+                      category: "lighting"
+                      vendor: "PartnerB"
+                      protocol: "HTTP"
+
+  /houses/{houseId}/devices:
+    get:
+      summary: Список устройств дома
+      description: Устройства, зарегистрированные пользователем в данном доме.
+      tags: [Provisioning]
+      parameters:
+        - name: houseId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Список устройств
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Device'
+    post:
+      summary: Зарегистрировать устройство в доме (самообслуживание)
+      description: Пользователь вводит данные комплекта (токен/серийный номер), устройство привязывается к дому и комнате.
+      tags: [Provisioning]
+      parameters:
+        - name: houseId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterDeviceRequest'
+            examples:
+              register:
+                value:
+                  provisioningToken: "KIT-XXXX-YYYY"
+                  deviceTypeId: "type-1"
+                  roomId: "room-101"
+                  friendlyName: "Котёл гостиная"
+      responses:
+        '201':
+          description: Устройство зарегистрировано
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Device'
+        '400':
+          description: Неверный токен или тип устройства
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /houses/{houseId}/scenarios:
+    get:
+      summary: Список сценариев дома
+      tags: [Scenarios]
+      parameters:
+        - name: houseId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Список сценариев
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Scenario'
+    post:
+      summary: Создать сценарий
+      tags: [Scenarios]
+      parameters:
+        - name: houseId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScenarioCreate'
+      responses:
+        '201':
+          description: Сценарий создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Scenario'
+
+  /devices/{deviceId}/commands:
+    post:
+      summary: Отправить команду устройству
+      description: |
+        Универсальный эндпоинт (Device Control Service): отопление (ON/OFF/SET_TEMPERATURE),
+        свет (ON/OFF), ворота (OPEN/CLOSE) и т.д. в зависимости от типа устройства.
+        Команды от пользователя приходят через API Gateway; команды от Scenarios & Automation
+        вызывают тот же сервис по внутреннему HTTP.
+      tags: [Control]
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendCommandRequest'
+            examples:
+              heating:
+                value:
+                  commandType: "SET_TEMPERATURE"
+                  payload: { "targetTemperature": 22 }
+              light:
+                value:
+                  commandType: "ON"
+                  payload: {}
+              gate:
+                value:
+                  commandType: "OPEN"
+                  payload: {}
+      responses:
+        '202':
+          description: Команда принята к исполнению
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommandAccepted'
+              examples:
+                fromUser:
+                  summary: Команда от пользователя
+                  value: { commandId: "cmd-001", status: "PENDING" }
+                fromScenario:
+                  summary: Команда от сценария (Scenarios & Automation)
+                  value: { commandId: "cmd-002", status: "PENDING", issuedBy: "scenario" }
+        '401':
+          description: Не авторизован (API Gateway / Auth Filter)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Устройство не найдено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /houses/{houseId}/telemetry:
+    get:
+      summary: Телеметрия по дому
+      description: Текущее состояние и/или история измерений по всем устройствам дома (Telemetry & State Service).
+      tags: [Telemetry]
+      parameters:
+        - name: houseId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: "date-time"
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: "date-time"
+        - name: metricType
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Список измерений или агрегатов
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelemetryResponse'
+
+components:
+  schemas:
+    DeviceType:
+      type: object
+      properties:
+        id: { type: string }
+        code: { type: string }
+        name: { type: string }
+        category: { type: string }
+        vendor: { type: string }
+        protocol: { type: string }
+
+    Device:
+      type: object
+      properties:
+        id: { type: string }
+        houseId: { type: string }
+        roomId: { type: string }
+        deviceTypeId: { type: string }
+        externalId: { type: string }
+        status: { type: string }
+        lastSeenAt:
+          type: string
+          format: "date-time"
+
+    RegisterDeviceRequest:
+      type: object
+      required: [provisioningToken, deviceTypeId]
+      properties:
+        provisioningToken: { type: string }
+        deviceTypeId: { type: string }
+        roomId: { type: string }
+        friendlyName: { type: string }
+
+    Scenario:
+      type: object
+      properties:
+        id: { type: string }
+        houseId: { type: string }
+        name: { type: string }
+        isEnabled: { type: boolean }
+        createdAt:
+          type: string
+          format: "date-time"
+
+    ScenarioCreate:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string }
+        isEnabled:
+          type: boolean
+          default: true
+
+    SendCommandRequest:
+      type: object
+      required: [commandType]
+      properties:
+        commandType: { type: string }
+        payload: { type: object }
+
+    CommandAccepted:
+      type: object
+      properties:
+        commandId: { type: string }
+        status:
+          type: string
+          example: PENDING
+        issuedBy:
+          type: string
+          enum: [user, scenario]
+          description: Заполняется при ответе; scenario — команда сформирована Scenarios & Automation.
+
+    TelemetryResponse:
+      type: object
+      properties:
+        devices:
+          type: array
+          items:
+            type: object
+            properties:
+              deviceId: { type: string }
+              metrics:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    metricType: { type: string }
+                    value: { type: number }
+                    unit: { type: string }
+                    timestamp:
+                      type: string
+                      format: "date-time"
+
+    Error:
+      type: object
+      properties:
+        code: { type: string }
+        message: { type: string }
